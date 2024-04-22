@@ -11,3 +11,9 @@ Make sure that the csv file and python script are at same location.
 ```docker-compose up -d```
 
 3. Run the application to create the tables.
+
+4. For running migration scrips, please run the commands below:
+```
+ docker build -t my-flyway-image .
+ docker run --rm --network="host" my-flyway-image migrate
+```
