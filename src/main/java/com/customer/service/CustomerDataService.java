@@ -118,7 +118,7 @@ public class CustomerDataService {
         return new ReturnBooksResponseDto(totalCharges);
     }
 
-    private double calculateChargeForBook(UUID bookId, Integer customerId) {
+    double calculateChargeForBook(UUID bookId, Integer customerId) {
         return lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId, customerId)
                 .map(lendingHistory -> {
                     long days = DAYS.between(lendingHistory.getLendDate().toInstant().atZone(ZoneId.systemDefault())
@@ -127,18 +127,31 @@ public class CustomerDataService {
                     Book book = bookRepository.findBookByBookId(bookId)
                             .orElseThrow(() -> new RuntimeException("Book not found"));
 
-                    double chargePerDay = calculateChargePerDay(book.getType());
-
-                    return days * chargePerDay;
+                    return calculateCharge(book.getType(), days);
                 })
                 .orElse(0.0);
     }
 
-    private double calculateChargePerDay(String bookType) {
-        return switch (bookType) {
-            case "Regular", "Novel" -> 1.5;
-            case "Fiction" -> 3.0;
+    private double calculateCharge(String bookType, long days) {
+        switch (bookType) {
+            case "Regular" -> {
+                if (days < 2) {
+                    return 2.0;
+                } else {
+                    return 2.0 + (days - 2) * 1.5;
+                }
+            }
+            case "Novel" -> {
+                if (days < 3) {
+                    return 4.5;
+                } else {
+                    return (days * 1.5);
+                }
+            }
+            case "Fiction" -> {
+                return days * 3.0;
+            }
             default -> throw new RuntimeException("Invalid book type");
-        };
+        }
     }
 }

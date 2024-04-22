@@ -7,6 +7,7 @@ import com.customer.persistence.model.LendingHistory;
 import com.customer.persistence.repository.BookRepository;
 import com.customer.persistence.repository.CustomerRepository;
 import com.customer.persistence.repository.LendingHistoryRepository;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -109,23 +110,23 @@ class CustomerDataServiceTest {
 	}
 
 	@Test
-	void shouldCalculateReturnCharges() {
+	void shouldCalculateReturnChargeForRegularBook() {
 		UUID bookId = UUID.randomUUID();
-		ReturnBooksRequestDto returnBooksRequestDto = new ReturnBooksRequestDto(1, Arrays.asList(bookId));
+		Integer customerId = 1;
 
 		LendingHistory lendingHistory = new LendingHistory();
 		lendingHistory.setLendDate(Date.from(LocalDate.now().minusDays(5).atStartOfDay(
 				ZoneId.systemDefault()).toInstant()));
-		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId, returnBooksRequestDto.customerId()))
+		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId, customerId))
 				.thenReturn(Optional.of(lendingHistory));
 
 		Book book = new Book();
 		book.setType("Regular");
 		when(bookRepository.findBookByBookId(bookId)).thenReturn(Optional.of(book));
 
-		ReturnBooksResponseDto response = customerDataService.calculateReturnCharges(returnBooksRequestDto);
+		double charge = customerDataService.calculateChargeForBook(bookId, customerId);
 
-		assert(7.5 == response.totalCharges());
+		Assertions.assertEquals(6.5, charge);
 	}
 
 	@Test
@@ -156,5 +157,45 @@ class CustomerDataServiceTest {
 		when(bookRepository.findBookByBookId(bookId)).thenReturn(Optional.empty());
 
 		assertThrows(RuntimeException.class, () -> customerDataService.calculateReturnCharges(returnBooksRequestDto));
+	}
+
+	@Test
+	void shouldCalculateChargeForNovel() {
+		UUID bookId = UUID.randomUUID();
+		Integer customerId = 1;
+
+		LendingHistory lendingHistory = new LendingHistory();
+		lendingHistory.setLendDate(Date.from(LocalDate.now().minusDays(2).atStartOfDay(
+				ZoneId.systemDefault()).toInstant()));
+		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId, customerId))
+				.thenReturn(Optional.of(lendingHistory));
+
+		Book book = new Book();
+		book.setType("Novel");
+		when(bookRepository.findBookByBookId(bookId)).thenReturn(Optional.of(book));
+
+		double charge = customerDataService.calculateChargeForBook(bookId, customerId);
+
+		Assertions.assertEquals(4.5, charge);
+	}
+
+	@Test
+	void shouldCalculateChargeForFiction() {
+		UUID bookId = UUID.randomUUID();
+		Integer customerId = 1;
+
+		LendingHistory lendingHistory = new LendingHistory();
+		lendingHistory.setLendDate(Date.from(LocalDate.now().minusDays(3).atStartOfDay(
+				ZoneId.systemDefault()).toInstant()));
+		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId, customerId))
+				.thenReturn(Optional.of(lendingHistory));
+
+		Book book = new Book();
+		book.setType("Fiction");
+		when(bookRepository.findBookByBookId(bookId)).thenReturn(Optional.of(book));
+
+		double charge = customerDataService.calculateChargeForBook(bookId, customerId);
+
+		Assertions.assertEquals(9.0, charge);
 	}
 }
