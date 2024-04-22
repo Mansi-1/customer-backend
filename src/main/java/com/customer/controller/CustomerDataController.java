@@ -1,6 +1,8 @@
 package com.customer.controller;
 
 import com.customer.dto.ResponseDto;
+import com.customer.dto.ReturnBooksRequestDto;
+import com.customer.dto.ReturnBooksResponseDto;
 import com.customer.service.CustomerDataService;
 import com.customer.dto.CustomerDataRequestDto;
 import jakarta.validation.Valid;
@@ -20,6 +22,13 @@ public class CustomerDataController {
     public ResponseEntity<ResponseDto> storeDetailsInDb(
             @Valid @RequestBody CustomerDataRequestDto customerDataRequestDto) {
         ResponseDto response = customerDataService.addDataToDatabase(customerDataRequestDto);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/return")
+    public ResponseEntity<ReturnBooksResponseDto> returnBooks(
+            @Valid @RequestBody ReturnBooksRequestDto returnBooksRequestDto) {
+        ReturnBooksResponseDto response = customerDataService.calculateReturnCharges(returnBooksRequestDto);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

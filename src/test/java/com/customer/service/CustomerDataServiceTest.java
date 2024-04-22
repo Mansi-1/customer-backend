@@ -1,9 +1,8 @@
 package com.customer.service;
 
-import com.customer.dto.BookDetailDto;
-import com.customer.dto.CustomerDataRequestDto;
-import com.customer.dto.ResponseDto;
+import com.customer.dto.*;
 import com.customer.persistence.model.Customer;
+import com.customer.persistence.model.LendingHistory;
 import com.customer.persistence.repository.BookRepository;
 import com.customer.persistence.repository.CustomerRepository;
 import com.customer.persistence.repository.LendingHistoryRepository;
@@ -13,10 +12,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 class CustomerDataServiceTest {
 
@@ -102,5 +104,41 @@ class CustomerDataServiceTest {
 		verify(lendingHistoryRepository, times(0)).saveAndFlush(any());
 		assert !responseDto.success();
 		assert "Error while adding data to database".equals(responseDto.message());
+	}
+
+	@Test
+	void shouldCalculateReturnCharges() {
+		UUID bookId1 = UUID.randomUUID();
+		UUID bookId2 = UUID.randomUUID();
+		ReturnBooksRequestDto returnBooksRequestDto = new ReturnBooksRequestDto(1, Arrays.asList(bookId1, bookId2));
+
+		LendingHistory lendingHistory1 = new LendingHistory();
+		lendingHistory1.setLendDate(Date.from(LocalDate.now().minusDays(5).atStartOfDay(
+				ZoneId.systemDefault()).toInstant()));
+		LendingHistory lendingHistory2 = new LendingHistory();
+		lendingHistory2.setLendDate(Date.from(LocalDate.now().minusDays(3).atStartOfDay(
+				ZoneId.systemDefault()).toInstant()));
+
+		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId1, returnBooksRequestDto.customerId()))
+				.thenReturn(Optional.of(lendingHistory1));
+		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId2, returnBooksRequestDto.customerId()))
+				.thenReturn(Optional.of(lendingHistory2));
+
+		ReturnBooksResponseDto response = customerDataService.calculateReturnCharges(returnBooksRequestDto);
+
+		assert(8.0 == response.totalCharges());
+	}
+
+	@Test
+	void shouldCalculateReturnChargesAs0WhenLendingHistoryNotFound() {
+		UUID bookId = UUID.randomUUID();
+		ReturnBooksRequestDto returnBooksRequestDto = new ReturnBooksRequestDto(1, Collections.singletonList(bookId));
+
+		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId, returnBooksRequestDto.customerId()))
+				.thenReturn(Optional.empty());
+
+		ReturnBooksResponseDto response = customerDataService.calculateReturnCharges(returnBooksRequestDto);
+
+		assert(0.0 == response.totalCharges());
 	}
 }

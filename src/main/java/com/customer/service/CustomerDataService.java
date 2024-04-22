@@ -11,9 +11,13 @@ import jakarta.transaction.Transactional;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.hibernate.query.sqm.tree.SqmNode.log;
 
@@ -103,5 +107,25 @@ public class CustomerDataService {
         customer.setCustomerId(customerId);
         customer.setCustomerName(customerName);
         return customer;
+    }
+
+    public ReturnBooksResponseDto calculateReturnCharges(ReturnBooksRequestDto requestDto) {
+        double totalCharges = 0.0;
+
+        for (UUID bookId : requestDto.bookIds()) {
+            Optional<LendingHistory> lendingHistory = lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(
+                    bookId, requestDto.customerId());
+
+            if (lendingHistory.isPresent()) {
+                LocalDate lendDate = lendingHistory.get().getLendDate().toInstant().atZone(ZoneId.systemDefault())
+                        .toLocalDate();
+                LocalDate returnDate = LocalDate.now();
+
+                long daysRented = ChronoUnit.DAYS.between(lendDate, returnDate);
+                totalCharges += daysRented;
+            }
+        }
+
+        return new ReturnBooksResponseDto(totalCharges);
     }
 }

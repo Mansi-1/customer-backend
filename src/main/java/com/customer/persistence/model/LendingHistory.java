@@ -27,6 +27,10 @@ public class LendingHistory {
     @Getter
     private UUID bookId;
 
+    public Date getLendDate() {
+        return lendDate;
+    }
+
     @Column(name = "lend_date")
     @Setter
     @Getter
