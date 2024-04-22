@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.time.temporal.ChronoUnit.DAYS;
 import static org.hibernate.query.sqm.tree.SqmNode.log;
 
 
@@ -109,23 +110,35 @@ public class CustomerDataService {
         return customer;
     }
 
-    public ReturnBooksResponseDto calculateReturnCharges(ReturnBooksRequestDto requestDto) {
-        double totalCharges = 0.0;
-
-        for (UUID bookId : requestDto.bookIds()) {
-            Optional<LendingHistory> lendingHistory = lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(
-                    bookId, requestDto.customerId());
-
-            if (lendingHistory.isPresent()) {
-                LocalDate lendDate = lendingHistory.get().getLendDate().toInstant().atZone(ZoneId.systemDefault())
-                        .toLocalDate();
-                LocalDate returnDate = LocalDate.now();
-
-                long daysRented = ChronoUnit.DAYS.between(lendDate, returnDate);
-                totalCharges += daysRented;
-            }
-        }
+    public ReturnBooksResponseDto calculateReturnCharges(ReturnBooksRequestDto returnBooksRequestDto) {
+        double totalCharges = returnBooksRequestDto.bookIds().stream()
+                .mapToDouble(bookId -> calculateChargeForBook(bookId, returnBooksRequestDto.customerId()))
+                .sum();
 
         return new ReturnBooksResponseDto(totalCharges);
+    }
+
+    private double calculateChargeForBook(UUID bookId, Integer customerId) {
+        return lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId, customerId)
+                .map(lendingHistory -> {
+                    long days = DAYS.between(lendingHistory.getLendDate().toInstant().atZone(ZoneId.systemDefault())
+                            .toLocalDate(), LocalDate.now());
+
+                    Book book = bookRepository.findBookByBookId(bookId)
+                            .orElseThrow(() -> new RuntimeException("Book not found"));
+
+                    double chargePerDay = calculateChargePerDay(book.getType());
+
+                    return days * chargePerDay;
+                })
+                .orElse(0.0);
+    }
+
+    private double calculateChargePerDay(String bookType) {
+        return switch (bookType) {
+            case "Regular", "Novel" -> 1.5;
+            case "Fiction" -> 3.0;
+            default -> throw new RuntimeException("Invalid book type");
+        };
     }
 }

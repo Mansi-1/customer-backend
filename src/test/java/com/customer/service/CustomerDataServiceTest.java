@@ -1,6 +1,7 @@
 package com.customer.service;
 
 import com.customer.dto.*;
+import com.customer.persistence.model.Book;
 import com.customer.persistence.model.Customer;
 import com.customer.persistence.model.LendingHistory;
 import com.customer.persistence.repository.BookRepository;
@@ -16,6 +17,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
@@ -108,25 +110,22 @@ class CustomerDataServiceTest {
 
 	@Test
 	void shouldCalculateReturnCharges() {
-		UUID bookId1 = UUID.randomUUID();
-		UUID bookId2 = UUID.randomUUID();
-		ReturnBooksRequestDto returnBooksRequestDto = new ReturnBooksRequestDto(1, Arrays.asList(bookId1, bookId2));
+		UUID bookId = UUID.randomUUID();
+		ReturnBooksRequestDto returnBooksRequestDto = new ReturnBooksRequestDto(1, Arrays.asList(bookId));
 
-		LendingHistory lendingHistory1 = new LendingHistory();
-		lendingHistory1.setLendDate(Date.from(LocalDate.now().minusDays(5).atStartOfDay(
+		LendingHistory lendingHistory = new LendingHistory();
+		lendingHistory.setLendDate(Date.from(LocalDate.now().minusDays(5).atStartOfDay(
 				ZoneId.systemDefault()).toInstant()));
-		LendingHistory lendingHistory2 = new LendingHistory();
-		lendingHistory2.setLendDate(Date.from(LocalDate.now().minusDays(3).atStartOfDay(
-				ZoneId.systemDefault()).toInstant()));
+		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId, returnBooksRequestDto.customerId()))
+				.thenReturn(Optional.of(lendingHistory));
 
-		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId1, returnBooksRequestDto.customerId()))
-				.thenReturn(Optional.of(lendingHistory1));
-		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId2, returnBooksRequestDto.customerId()))
-				.thenReturn(Optional.of(lendingHistory2));
+		Book book = new Book();
+		book.setType("Regular");
+		when(bookRepository.findBookByBookId(bookId)).thenReturn(Optional.of(book));
 
 		ReturnBooksResponseDto response = customerDataService.calculateReturnCharges(returnBooksRequestDto);
 
-		assert(8.0 == response.totalCharges());
+		assert(7.5 == response.totalCharges());
 	}
 
 	@Test
@@ -140,5 +139,22 @@ class CustomerDataServiceTest {
 		ReturnBooksResponseDto response = customerDataService.calculateReturnCharges(returnBooksRequestDto);
 
 		assert(0.0 == response.totalCharges());
+	}
+
+
+	@Test
+	void shouldThrowRuntimeExceptionWhenBookNotFound() {
+		UUID bookId = UUID.randomUUID();
+		ReturnBooksRequestDto returnBooksRequestDto = new ReturnBooksRequestDto(1, List.of(bookId));
+
+		LendingHistory lendingHistory = new LendingHistory();
+		lendingHistory.setLendDate(Date.from(LocalDate.now().minusDays(5).atStartOfDay(
+				ZoneId.systemDefault()).toInstant()));
+		when(lendingHistoryRepository.findLendingHistoryByBookIdAndCustomerId(bookId, returnBooksRequestDto.customerId()))
+				.thenReturn(Optional.of(lendingHistory));
+
+		when(bookRepository.findBookByBookId(bookId)).thenReturn(Optional.empty());
+
+		assertThrows(RuntimeException.class, () -> customerDataService.calculateReturnCharges(returnBooksRequestDto));
 	}
 }

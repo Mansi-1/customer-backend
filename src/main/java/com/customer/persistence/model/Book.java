@@ -27,6 +27,11 @@ public class Book {
     @Setter
     private String authorName;
 
+    @Column(name = "type")
+    @Getter
+    @Setter
+    private String type;
+
     public void setBookId(UUID bookId) {
         this.bookId = bookId;
     }
@@ -41,5 +46,13 @@ public class Book {
 
     public UUID getBookId() {
         return bookId;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }
