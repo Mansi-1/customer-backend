@@ -1,6 +1,7 @@
 package com.customer.persistence.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.Setter;
 
 import java.util.UUID;
@@ -15,6 +16,7 @@ public class Book {
 
     @Column(name = "book_id")
     @Setter
+    @Getter
     private UUID bookId;
 
     @Column(name = "book_name")
@@ -35,5 +37,9 @@ public class Book {
 
     public void setAuthorName(String authorName) {
         this.authorName = authorName;
+    }
+
+    public UUID getBookId() {
+        return bookId;
     }
 }

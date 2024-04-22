@@ -1,8 +1,6 @@
 package com.customer.service;
 
-import com.customer.dto.BookDetailDto;
-import com.customer.dto.CustomerDataRequestDto;
-import com.customer.dto.ResponseDto;
+import com.customer.dto.*;
 import com.customer.persistence.model.Book;
 import com.customer.persistence.model.Customer;
 import com.customer.persistence.model.LendingHistory;
@@ -60,6 +58,8 @@ public class CustomerDataService {
     private void addLendingHistoryData(@NotNull CustomerDataRequestDto customerDataRequestDto) {
         customerDataRequestDto.listOfBooks().stream()
                 .map(bookDetailDto -> createLendingHistory(bookDetailDto, customerDataRequestDto.customerId()))
+                .filter(lendingHistory -> !lendingHistoryRepository.existsByBookIdAndCustomerId(lendingHistory.getBookId()
+                        , lendingHistory.getCustomerId()))
                 .forEach(lendingHistoryRepository::saveAndFlush);
     }
 
@@ -81,6 +81,7 @@ public class CustomerDataService {
     private void addBookData(List<BookDetailDto> bookDetailDtoList) {
         bookDetailDtoList.stream()
                 .map(this::createBookFromDto)
+                .filter(book -> !bookRepository.existsByBookId(book.getBookId()))
                 .forEach(bookRepository::saveAndFlush);
     }
 

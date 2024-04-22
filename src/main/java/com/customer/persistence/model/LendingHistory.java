@@ -19,14 +19,17 @@ public class LendingHistory {
 
     @Column(name = "customer_id")
     @Setter
+    @Getter
     private Integer customerId;
 
     @Column(name = "book_id")
     @Setter
+    @Getter
     private UUID bookId;
 
     @Column(name = "lend_date")
     @Setter
+    @Getter
     private Date lendDate;
 
     @Column(name = "lent_till")
@@ -47,5 +50,13 @@ public class LendingHistory {
 
     public void setLendTill(Date lendTill) {
         this.lendTill = lendTill;
+    }
+
+    public Integer getCustomerId() {
+        return customerId;
+    }
+
+    public UUID getBookId() {
+        return bookId;
     }
 }
